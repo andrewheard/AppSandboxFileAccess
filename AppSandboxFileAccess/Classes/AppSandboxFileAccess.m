@@ -125,7 +125,11 @@
 
 - (NSData *)persistPermissionURL:(NSURL *)url {
 	NSParameterAssert(url);
-	
+
+  if (NSAppKitVersionNumber < NSAppKitVersionNumber10_7_3) {
+    return nil;
+  }
+
 	// store the sandbox permissions
 	NSData *bookmarkData = [url bookmarkDataWithOptions:NSURLBookmarkCreationWithSecurityScope includingResourceValuesForKeys:nil relativeToURL:nil error:NULL];
 	if (bookmarkData) {
@@ -145,13 +149,27 @@
 }
 
 - (BOOL)accessFilePath:(NSString *)path persistPermission:(BOOL)persist withBlock:(AppSandboxFileAccessBlock)block {
+  if (NSAppKitVersionNumber < NSAppKitVersionNumber10_7) {
+    block();
+    return YES;
+  } else if (NSAppKitVersionNumber >= NSAppKitVersionNumber10_7 && NSAppKitVersionNumber <= NSAppKitVersionNumber10_7_2)  {
+    return NO;
+  }
+  
 	return [self accessFileURL:[NSURL fileURLWithPath:path] persistPermission:persist withBlock:block];
 }
 
 - (BOOL)accessFileURL:(NSURL *)fileURL persistPermission:(BOOL)persist withBlock:(AppSandboxFileAccessBlock)block {
 	NSParameterAssert(fileURL);
 	NSParameterAssert(block);
-	
+
+  if (NSAppKitVersionNumber < NSAppKitVersionNumber10_7) {
+    block();
+    return YES;
+  } else if (NSAppKitVersionNumber >= NSAppKitVersionNumber10_7 && NSAppKitVersionNumber <= NSAppKitVersionNumber10_7_2)  {
+    return NO;
+  }
+  
 	BOOL success = [self requestAccessPermissionsForFileURL:fileURL persistPermission:persist withBlock:^(NSURL *securityScopedFileURL, NSData *bookmarkData) {
 		// execute the block with the file access permissions
 		@try {
@@ -167,8 +185,16 @@
 
 - (BOOL)requestAccessPermissionsForFilePath:(NSString *)filePath persistPermission:(BOOL)persist withBlock:(AppSandboxFileSecurityScopeBlock)block {
 	NSParameterAssert(filePath);
-	
+  
 	NSURL *fileURL = [NSURL fileURLWithPath:filePath];
+
+  if (NSAppKitVersionNumber < NSAppKitVersionNumber10_7) {
+    block(fileURL, nil);
+    return YES;
+  } else if (NSAppKitVersionNumber >= NSAppKitVersionNumber10_7 && NSAppKitVersionNumber <= NSAppKitVersionNumber10_7_2)  {
+    return NO;
+  }
+
 	return [self requestAccessPermissionsForFileURL:fileURL persistPermission:persist withBlock:block];
 }
 
@@ -179,7 +205,14 @@
 	
 	// standardize the file url and remove any symlinks so that the url we lookup in bookmark data would match a url given by the askPermissionForURL method
 	fileURL = [[fileURL URLByStandardizingPath] URLByResolvingSymlinksInPath];
-	
+
+  if (NSAppKitVersionNumber < NSAppKitVersionNumber10_7) {
+    block(fileURL, nil);
+    return YES;
+  } else if (NSAppKitVersionNumber >= NSAppKitVersionNumber10_7 && NSAppKitVersionNumber <= NSAppKitVersionNumber10_7_2)  {
+    return NO;
+  }
+
 	// lookup bookmark data for this url, this will automatically load bookmark data for a parent path if we have it
 	NSData *bookmarkData = [AppSandboxFileAccessPersist bookmarkDataForURL:fileURL];
 	if (bookmarkData) {
